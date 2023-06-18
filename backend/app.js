@@ -1,10 +1,19 @@
-// const express = require("express");
-// const multer = require("multer");
-// const path = require("node:path");
-// require("dotenv").config();
-const { createNewUser, deleteUser } = require("./lib/db/db");
+const express = require("express");
+const multer = require("multer");
+const path = require("node:path");
+const cors = require("cors");
+require("dotenv").config();
 
-// const PORT = 3000;
+const app = express();
+app.use(cors({ origin: "*" }));
+
+const { createNewUser, deleteUser, validateUser, storeFileInfo, findFileByUrl, getFileListByUserId } = require("./lib/db");
+
+const PORT = 3000;
+
+const apiRouter = require("./routes/api");
+
+app.use("/api", apiRouter);
 // const storage = multer.diskStorage({
 //   destination: (req, file, callback) => {
 //     // callback(null, "./fileReceived");
@@ -19,14 +28,27 @@ const { createNewUser, deleteUser } = require("./lib/db/db");
 
 // const uploadMiddleware = multer({ storage: storage });
 
-// const app = express();
-// app.set("view engine", "ejs");
+// storeFileInfo("monabba.jpg", "b65be946-d869-4028-8d30-3af85c038170", "/2023/06/18/monabba.jpg")
+//   .then((newFile) => {
+//     console.log(newFile);
+//   })
+//   .catch((err) => {
+//     if (err.message.includes("Unique constraint failed on the constraint: `File_url_key`")) {
+//       console.log("Name exists");
+//     }
+//   });
 
-// app.get("/", (req, res) => {
-//   res.render("upload");
+// findFileByUrl("/2023/06/18/john constantine's book.jpg").then((file) => {
+//   if (file === null) {
+//     console.log("safe to save");
+//   } else {
+//     console.log(file);
+//   }
 // });
 
-// // TODO - GET NEW USER ID
+// getFileListByUserId("530a2d64-1d97-4068-85d9-36aada8d87b7").then((fileList) => {
+//   console.log(fileList);
+// });
 
 // // TODO - GET PREVIOUS APIS BASED ON UUID
 // app.get("/api/uploads", (req, res) => {});
@@ -37,9 +59,9 @@ const { createNewUser, deleteUser } = require("./lib/db/db");
 
 // console.log("ENV", process.env.USER_ID);
 
-// app.listen(PORT, () => {
-//   console.log(`LISTENING ON PORT ${PORT}`);
-// });
+app.listen(PORT, () => {
+  console.log(`LISTENING ON PORT ${PORT}`);
+});
 
 // console.log(users);
 

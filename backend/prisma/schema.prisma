@@ -22,9 +22,10 @@ model File {
   fileName   String
   uploadedAt DateTime @default(now())
   User       User     @relation(fields: [userId], references: [id])
-  userId     String   @unique
+  userId     String
   deleted    Boolean
-  url        String
+  url        String   @unique
+  password   String?
 
   @@index([userId])
 }
