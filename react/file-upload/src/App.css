@@ -1,6 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
+  padding: 0;
+  font-family: Inter;
+  font-weight: 400;
+
+  --radius: 1rem;
+}
+
+body {
+  margin: 0;
+}
+
+.grid-holder {
+  margin: auto;
+  height: 100vh;
+
+  width: 70vw;
+  max-width: 55rem;
+  display: flex;
+}
+
+.grid-holder div {
+  flex: 1;
+  margin: auto 0;
+}
+
+.border {
+  outline: 2px red solid;
+}
+
+.uploads-table {
+  min-height: 20rem;
+
+  border-radius: var(--radius);
+
+  background-color: #343434;
+
+  margin-left: 20rem;
   padding: 2rem;
-  text-align: center;
 }
