@@ -81,10 +81,12 @@ function App() {
     <>
       <div className="grid-holder">
         <div>
-          <Typography variant="h4" component="h1">
-            File Uploader
-          </Typography>
-          <Typography variant="body1">Maximum 10MB allowed</Typography>
+          <h1>File Uploader</h1>
+          <div className="upload-button">
+            <span className="btn-title">Drag a file here</span>
+            or <span className="btn-underline">select a file</span>
+          </div>
+          <p>Maximum 10MB allowed</p>
         </div>
         {/* <IconButton style={{ color: "white" }}>
             <ContentCopyIcon />
