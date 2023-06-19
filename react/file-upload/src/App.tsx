@@ -9,11 +9,28 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import axios from "./utils/axios";
 
 function App() {
-  const [uploads, setUploads] = useState([{ fileName: "test.jpg", uploadTime: "June 14", url: "/sddd.jpg" }]);
+  const [uploads, setUploads] = useState([
+    {
+      id: "cbcedbcf-665f-49ca-aad5-e11a3429011f",
+      fileName: "monalisa.jpg",
+      uploadedAt: "2023-06-18T13:12:45.430Z",
+      userId: "b65be946-d869-4028-8d30-3af85c038170",
+      deleted: false,
+      url: "/2023/06/18/monalisa.jpg",
+      password: null,
+    },
+    {
+      id: "f9988a90-2bb5-4793-bff3-e31508dc851f",
+      fileName: "monabba.jpg",
+      uploadedAt: "2023-06-18T13:12:56.689Z",
+      userId: "b65be946-d869-4028-8d30-3af85c038170",
+      deleted: false,
+      url: "/2023/06/18/monabba.jpg",
+      password: null,
+    },
+  ]);
   const [loggedIn, setLoggedIn] = useState(false);
   const [errorMsg, setErrorMsg] = useState<String | null>(null);
-
-  const borderRed = { outline: "2px red solid" };
 
   const createUser = () => {
     // CREATE NEW USER
@@ -56,7 +73,7 @@ function App() {
 
   const getFileList = () => {
     axios.get(`/api/files/`).then((response: any) => {
-      // console.log(response.data);
+      console.log(response.data.files);
       setUploads(response.data.files);
     });
   };
@@ -95,14 +112,14 @@ function App() {
             <ClearIcon />
           </IconButton> */}
         <div className="uploads-table">
-          <Typography>Past Uploads</Typography>
-          <List>
+          <h2>Past Uploads ({uploads.length})</h2>
+          <ul>
             {uploads.map((file) => (
               <>
-                <ListItem disablePadding>{file.fileName}</ListItem>
+                <li key={file.url}>{file.fileName}</li>
               </>
             ))}
-          </List>
+          </ul>
         </div>
       </div>
     </>
