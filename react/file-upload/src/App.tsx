@@ -6,10 +6,12 @@ import ClearIcon from "@mui/icons-material/Clear";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 //@ts-ignore
-import axios from "./utils/axios";
+// import axios from "./utils/axios";
+
+import axios from "axios";
 
 function App() {
-  const [uploads, setUploads] = useState([
+  const [previousUploads, setPreviousUploads] = useState([
     {
       id: "cbcedbcf-665f-49ca-aad5-e11a3429011f",
       fileName: "monalisa.jpg",
@@ -31,29 +33,68 @@ function App() {
   ]);
   const [loggedIn, setLoggedIn] = useState(false);
   const [errorMsg, setErrorMsg] = useState<String | null>(null);
+  const [dragState, setDragState] = useState<number | null>(null); // 1-entire body, 2-on button
+  const [uploadingFiles, setUploadingFiles] = useState<{ id: number; filename: string; estimated: number | null; progress: number; errorMsg: string | null }[]>([]);
+  const Axios = axios.create({
+    baseURL: "http://localhost:3000",
+  });
+
+  const axiosConfig = {
+    headers: {
+      authorization: localStorage.TYFILE_TOKEN ? `Bearer ${localStorage.TYFILE_TOKEN}` : "",
+      "Content-Type": "application/json",
+    },
+  };
+
+  useEffect(() => {
+    const localToken = localStorage.TYFILE_TOKEN;
+    if (!localToken) {
+      createUser();
+    } else {
+      // EXISTING USER
+      login();
+    }
+
+    document.addEventListener("dragleave", (event) => {
+      event.preventDefault();
+      if (event.clientX === 0 && event.clientY === 0) setDragState(null);
+    });
+
+    document.addEventListener("dragenter", (event) => {
+      // event.preventDefault();
+      if ((event.target as HTMLElement).classList.contains("grid-holder")) {
+        setDragState(1);
+      } else if ((event.target as HTMLElement).classList.contains("upload-button--hint-land")) {
+        setDragState(2);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (loggedIn) {
+      getFileList();
+    }
+  }, [loggedIn]);
 
   const createUser = () => {
     // CREATE NEW USER
     axios
-      .post(`/api/user`)
+      .post(`/api/user/new`)
       .then((response: any) => {
         if (response.data.token) {
           console.log("Successful creation");
           localStorage.setItem("TYFILE_TOKEN", response.data.token);
-
           setLoggedIn(true);
         }
       })
       .catch((err: any) => {
         console.log("ERROR:", err.message);
-
         throw new Error("Cannot create user");
       });
   };
 
   const login = () => {
-    axios
-      .post(`/api/login`)
+    Axios.post(`/api/user/login`, {}, axiosConfig)
       .then((response: any) => {
         // console.log(response.data);
         setLoggedIn(true);
@@ -72,52 +113,119 @@ function App() {
   };
 
   const getFileList = () => {
-    axios.get(`/api/files/`).then((response: any) => {
+    setPreviousUploads([]);
+    Axios.get(`/api/user/files/`, axiosConfig).then((response: any) => {
       console.log(response.data.files);
-      setUploads(response.data.files);
+      setPreviousUploads(response.data.files);
     });
   };
 
-  useEffect(() => {
-    const localToken = localStorage.TYFILE_TOKEN;
-    if (!localToken) {
-      createUser();
-    } else {
-      // EXISTING USER
-      login();
-    }
-  }, []);
+  const uploadFile = (file: File, uploadId: number) => {
+    var formData = new FormData();
+    formData.append("fileContent", file);
 
-  useEffect(() => {
-    if (loggedIn) {
-      getFileList();
-    }
-  }, [loggedIn]);
+    let config = {
+      onUploadProgress: (progressEvent: any) => {
+        if (progressEvent.progress === 1) {
+        } else {
+          // SET THE UPDATE STATUS TO UI
+
+          setUploadingFiles((oldFileList) =>
+            oldFileList.map((file) => ({
+              ...file,
+              progress: uploadId === file.id ? progressEvent.progress : 0,
+              estimated: uploadId === file.id && progressEvent.estimated !== undefined ? progressEvent.estimated : null,
+            }))
+          );
+        }
+
+        console.log("Progress", Math.round((progressEvent.loaded * 100) / progressEvent.total));
+        console.log("progressEvent", progressEvent);
+      },
+    };
+
+    Axios.post("/upload/file/", formData, config)
+      .then((response: any) => {
+        console.log(response.data);
+      })
+      .catch((err: any) => {
+        console.log("ERROR:", err.message);
+        throw new Error("Cannot upload file");
+      });
+  };
+
+  const handleFileUpload = (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+
+    let files = event.dataTransfer.files;
+    console.log(files);
+
+    [...files].forEach((file) => {
+      let fileSize = file.size / 1024 / 1024;
+      let errorMsg: string | null = null;
+      let localUploadId: number;
+      console.log(fileSize);
+      if (fileSize > 10) {
+        errorMsg = "file is too large";
+      }
+
+      setUploadingFiles((oldFileList) => {
+        localUploadId = oldFileList.length === 0 ? 0 : oldFileList[oldFileList.length - 1].id + 1;
+        return [
+          ...oldFileList,
+          {
+            id: localUploadId,
+            filename: file.name,
+            progress: 0,
+            estimated: null,
+            errorMsg: errorMsg,
+          },
+        ];
+      });
+
+      if (!errorMsg) {
+        //@ts-ignore
+        uploadFile(file, localUploadId);
+      }
+    });
+  };
 
   return (
     <>
       <div className="grid-holder">
         <div>
           <h1>File Uploader</h1>
-          <div className="upload-button">
-            <span className="btn-title">Drag a file here</span>
-            or <span className="btn-underline">select a file</span>
+          <div
+            className={dragState === null ? "upload-button" : dragState === 1 ? "upload-button--hint-land" : "upload-button--ready-release"}
+            onDrop={handleFileUpload}
+            onDragOver={(event) => {
+              event.preventDefault();
+            }}
+          >
+            {dragState === null && <span className="btn-title">Drag a file here</span>}
+            {dragState === 1 && <span className="btn-title--dragged">Drop file here</span>}
+            {dragState === 2 && <span className="btn-title--dragged">Release to upload</span>}
+            {dragState === null && (
+              <>
+                or <span className="btn-underline">select a file</span>
+              </>
+            )}
           </div>
           <p>Maximum 10MB allowed</p>
         </div>
-        {/* <IconButton style={{ color: "white" }}>
-            <ContentCopyIcon />
-          </IconButton>
-          <IconButton style={{ color: "white" }}>
-            <ClearIcon />
-          </IconButton> */}
         <div className="uploads-table">
-          <h2>Past Uploads ({uploads.length})</h2>
+          <h2>Past Uploads ({previousUploads.length})</h2>
           <ul>
-            {uploads.map((file) => (
-              <>
-                <li key={file.url}>{file.fileName}</li>
-              </>
+            {previousUploads.map((file) => (
+              <Box key={file.url}>
+                <li>{file.fileName}</li>
+                <IconButton style={{ color: "white" }}>
+                  <ContentCopyIcon />
+                </IconButton>
+                <IconButton style={{ color: "white" }}>
+                  <ClearIcon />
+                </IconButton>
+              </Box>
             ))}
           </ul>
         </div>
