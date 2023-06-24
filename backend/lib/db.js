@@ -31,21 +31,23 @@ const getFilesByUserId = async (userId) => {
   });
 };
 
-const storeFileInfo = async (fileName, userId, url) => {
-  // id         String   @id @default(uuid())
+const createFile = async (fileName, userId, url) => {
+  // id         String       @id @default(uuid())
   // fileName   String
-  // uploadedAt DateTime @default(now())
-  // User       User     @relation(fields: [userId], references: [id])
-  // userId     String   @unique
-  // deleted    Boolean
-  // url        String
+  // uploadedAt DateTime     @default(now())
+  // User       User         @relation(fields: [userId], references: [id])
+  // userId     String
+  // deleted    Boolean      @default(false)
+  // status     UploadStatus @default(PENDING)
+  // url        String       @unique
+  // password   String?
 
   const file = await prisma.file.create({
     data: {
       fileName: fileName,
       userId: userId,
-      deleted: false,
       url: url,
+      deleted: false,
     },
   });
 
@@ -72,4 +74,26 @@ const getFileListByUserId = async (userId) => {
   return file;
 };
 
-module.exports = { createNewUser, deleteUser, getFilesByUserId, validateUser, storeFileInfo, findFileByUrl, getFileListByUserId };
+const getFileById = async (fileId) => {
+  const file = await prisma.file.findUnique({
+    where: {
+      id: fileId,
+    },
+  });
+
+  return file;
+};
+
+const updateFile = async (fileId, fileContent) => {
+  const file = await prisma.file.update({
+    where: {
+      id: fileId,
+    },
+    data: {
+      ...fileContent,
+    },
+  });
+  return file;
+};
+
+module.exports = { createNewUser, deleteUser, getFilesByUserId, validateUser, createFile, findFileByUrl, getFileListByUserId, getFileById, updateFile };

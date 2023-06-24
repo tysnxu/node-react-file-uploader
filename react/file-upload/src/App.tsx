@@ -1,40 +1,33 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import { Box, IconButton, Typography, Container, List, ListItem } from "@mui/material";
+import { Box, IconButton, Typography, Container, List, ListItem, Button } from "@mui/material";
 import Grid from "@mui/material/Unstable_Grid2";
 import ClearIcon from "@mui/icons-material/Clear";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
-//@ts-ignore
-// import axios from "./utils/axios";
-
 import axios from "axios";
 
+type FileObject = {
+  fileName: string;
+  id: string;
+  uploadedAt: string;
+  url: string;
+};
+
+type UploadingFileObject = {
+  id: string;
+  filename: string;
+  estimated: number | null;
+  progress: number;
+  errorMsg: string | null;
+};
+
 function App() {
-  const [previousUploads, setPreviousUploads] = useState([
-    {
-      id: "cbcedbcf-665f-49ca-aad5-e11a3429011f",
-      fileName: "monalisa.jpg",
-      uploadedAt: "2023-06-18T13:12:45.430Z",
-      userId: "b65be946-d869-4028-8d30-3af85c038170",
-      deleted: false,
-      url: "/2023/06/18/monalisa.jpg",
-      password: null,
-    },
-    {
-      id: "f9988a90-2bb5-4793-bff3-e31508dc851f",
-      fileName: "monabba.jpg",
-      uploadedAt: "2023-06-18T13:12:56.689Z",
-      userId: "b65be946-d869-4028-8d30-3af85c038170",
-      deleted: false,
-      url: "/2023/06/18/monabba.jpg",
-      password: null,
-    },
-  ]);
+  const [previousUploads, setPreviousUploads] = useState<FileObject[]>([]);
   const [loggedIn, setLoggedIn] = useState(false);
   const [errorMsg, setErrorMsg] = useState<String | null>(null);
-  const [dragState, setDragState] = useState<number | null>(null); // 1-entire body, 2-on button
-  const [uploadingFiles, setUploadingFiles] = useState<{ id: number; filename: string; estimated: number | null; progress: number; errorMsg: string | null }[]>([]);
+  const [dragState, setDragState] = useState<number | null>(null); // 1-DRAG OVER DOCUMENT, 2-DRAG OVER BUTTON, 3-RELEASED AND UPLOADING
+  const [uploadingFiles, setUploadingFiles] = useState<UploadingFileObject[]>([]);
   const Axios = axios.create({
     baseURL: "http://localhost:3000",
   });
@@ -47,6 +40,12 @@ function App() {
   };
 
   useEffect(() => {
+    if (localStorage.getItem("TYFILE_PREVIOUS_UPLOADS") !== null) {
+      //@ts-ignore
+      let local = JSON.parse(localStorage.getItem("TYFILE_PREVIOUS_UPLOADS"));
+      setPreviousUploads(local);
+      console.log("LOAD LOCAL", local);
+    }
     const localToken = localStorage.TYFILE_TOKEN;
     if (!localToken) {
       createUser();
@@ -73,13 +72,15 @@ function App() {
   useEffect(() => {
     if (loggedIn) {
       getFileList();
+    } else {
+      setPreviousUploads([]);
+      localStorage.removeItem("TYFILE_PREVIOUS_UPLOADS");
     }
   }, [loggedIn]);
 
   const createUser = () => {
     // CREATE NEW USER
-    axios
-      .post(`/api/user/new`)
+    Axios.post(`/api/user/new`, {}, axiosConfig)
       .then((response: any) => {
         if (response.data.token) {
           console.log("Successful creation");
@@ -113,38 +114,47 @@ function App() {
   };
 
   const getFileList = () => {
-    setPreviousUploads([]);
     Axios.get(`/api/user/files/`, axiosConfig).then((response: any) => {
-      console.log(response.data.files);
+      // console.log(response.data.files);
+      localStorage.setItem("TYFILE_PREVIOUS_UPLOADS", JSON.stringify([...response.data.files]));
       setPreviousUploads(response.data.files);
     });
   };
 
-  const uploadFile = (file: File, uploadId: number) => {
+  const uploadFile = (file: File, uploadFileId: string) => {
+    // UPLOAD FILE TO SERVER
     var formData = new FormData();
     formData.append("fileContent", file);
-
-    let config = {
+    formData.append("fileId", uploadFileId);
+    let uploadConfig = {
+      headers: {
+        authorization: localStorage.TYFILE_TOKEN ? `Bearer ${localStorage.TYFILE_TOKEN}` : "",
+      },
       onUploadProgress: (progressEvent: any) => {
         if (progressEvent.progress === 1) {
+          setUploadingFiles((oldUploadingList) => oldUploadingList.filter((uploadingFile) => uploadFileId !== uploadingFile.id));
+          // FINISH UPLOAD -> REFRESH FILE LIST
+          setTimeout(() => {
+            getFileList();
+          }, 200);
         } else {
           // SET THE UPDATE STATUS TO UI
-
           setUploadingFiles((oldFileList) =>
             oldFileList.map((file) => ({
               ...file,
-              progress: uploadId === file.id ? progressEvent.progress : 0,
-              estimated: uploadId === file.id && progressEvent.estimated !== undefined ? progressEvent.estimated : null,
+              progress: uploadFileId === file.id ? progressEvent.progress : 0,
+              estimated: uploadFileId === file.id && progressEvent.estimated !== undefined ? progressEvent.estimated : null,
             }))
           );
         }
 
-        console.log("Progress", Math.round((progressEvent.loaded * 100) / progressEvent.total));
-        console.log("progressEvent", progressEvent);
+        // console.log("Progress", Math.round((progressEvent.loaded * 100) / progressEvent.total));
+        // console.log("progressEvent", progressEvent);
       },
     };
 
-    Axios.post("/upload/file/", formData, config)
+    //@ts-ignore
+    Axios.post("/api/file/upload/", formData, uploadConfig)
       .then((response: any) => {
         console.log(response.data);
       })
@@ -156,37 +166,49 @@ function App() {
 
   const handleFileUpload = (event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
+    setDragState(null);
 
     let files = event.dataTransfer.files;
-    console.log(files);
 
+    if (files.length === 0) {
+      console.log("NO FILES DRAGGED");
+      return;
+    }
+
+    console.log(files);
     [...files].forEach((file) => {
       let fileSize = file.size / 1024 / 1024;
       let errorMsg: string | null = null;
-      let localUploadId: number;
       console.log(fileSize);
       if (fileSize > 10) {
         errorMsg = "file is too large";
       }
 
-      setUploadingFiles((oldFileList) => {
-        localUploadId = oldFileList.length === 0 ? 0 : oldFileList[oldFileList.length - 1].id + 1;
-        return [
-          ...oldFileList,
-          {
-            id: localUploadId,
-            filename: file.name,
-            progress: 0,
-            estimated: null,
-            errorMsg: errorMsg,
-          },
-        ];
-      });
+      // CREATE FILE OBJECT IN DB
+      Axios.post(`/api/file/new`, { fileName: file.name }, axiosConfig)
+        .then((response: any) => {
+          let fileUUID = response.data.id;
+          setUploadingFiles((oldFileList) => {
+            return [
+              ...oldFileList,
+              {
+                id: fileUUID,
+                filename: file.name,
+                progress: 0,
+                estimated: null,
+                errorMsg: errorMsg,
+              },
+            ];
+          });
 
-      if (!errorMsg) {
-        //@ts-ignore
-        uploadFile(file, localUploadId);
-      }
+          if (!errorMsg) {
+            uploadFile(file, fileUUID);
+          }
+        })
+        .catch((err: any) => {
+          console.error("ERROR:", err.message);
+          throw new Error("Cannot create file");
+        });
     });
   };
 
@@ -213,12 +235,36 @@ function App() {
           </div>
           <p>Maximum 10MB allowed</p>
         </div>
-        <div className="uploads-table">
-          <h2>Past Uploads ({previousUploads.length})</h2>
-          <ul>
+        {!(uploadingFiles.length === 0 && previousUploads.length === 0) && (
+          <div className="uploads-table">
+            {uploadingFiles.length !== 0 && (
+              <>
+                <h2>Uploading ({uploadingFiles.length})</h2>
+                {uploadingFiles.map((uploadingFile) => (
+                  <div className="uploading-file-section">
+                    <p>{uploadingFile.filename}</p>
+                    <div className="progress-bar-holder">
+                      <div className="progress-bar">
+                        <div className="progress-indicator" style={{ width: `${uploadingFile.progress * 100}%` }}></div>
+                      </div>
+                      {Math.floor(uploadingFile.progress * 100)}%
+                    </div>
+                    {uploadingFile.estimated &&
+                      (uploadingFile.estimated < 60 ? (
+                        <p className="estimated-time">Estimated: {uploadingFile.estimated?.toFixed(2)}s</p>
+                      ) : (
+                        <p className="estimated-time">
+                          Estimated: {Math.floor(uploadingFile.estimated / 60)}m {Math.floor(uploadingFile.estimated % 60)}s
+                        </p>
+                      ))}
+                  </div>
+                ))}
+              </>
+            )}
+            <h2>Past Uploads ({previousUploads.length})</h2>
             {previousUploads.map((file) => (
-              <Box key={file.url}>
-                <li>{file.fileName}</li>
+              <Box key={file.url} className="file-list-item">
+                <span>{file.fileName}</span>
                 <IconButton style={{ color: "white" }}>
                   <ContentCopyIcon />
                 </IconButton>
@@ -227,8 +273,8 @@ function App() {
                 </IconButton>
               </Box>
             ))}
-          </ul>
-        </div>
+          </div>
+        )}
       </div>
     </>
   );

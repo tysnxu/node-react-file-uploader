@@ -23,7 +23,7 @@ model File {
   uploadedAt DateTime     @default(now())
   User       User         @relation(fields: [userId], references: [id])
   userId     String
-  deleted    Boolean
+  deleted    Boolean      @default(false)
   status     UploadStatus @default(PENDING)
   url        String       @unique
   password   String?

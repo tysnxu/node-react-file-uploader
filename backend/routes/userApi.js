@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../lib/auth");
-const { createNewUser, deleteUser, validateUser, storeFileInfo, findFileByUrl, getFileListByUserId } = require("../lib/db");
+const { createNewUser, deleteUser, validateUser, getFileListByUserId } = require("../lib/db");
 const jwt = require("jsonwebtoken");
 
 router.get("/", (req, res) => {
@@ -24,7 +24,16 @@ router.get("/files/", auth, (req, res) => {
   const userId = res.locals.userId;
   getFileListByUserId(userId).then((files) => {
     // console.log(files);
-    res.status(200).json({ files: files });
+    res.status(200).json({
+      files: files
+        .filter((file) => file.status === "SUCCESSFUL" && file.deleted !== true)
+        .map((file) => ({
+          fileName: file.fileName,
+          id: file.id,
+          uploadedAt: file.uploadedAt,
+          url: file.url,
+        })),
+    });
   });
 });
 
