@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import { Box, IconButton, Typography, Container, List, ListItem, Button } from "@mui/material";
-import Grid from "@mui/material/Unstable_Grid2";
+import { Box, IconButton, Typography, Container, List, ListItem, Button, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
@@ -28,6 +27,8 @@ function App() {
   const [errorMsg, setErrorMsg] = useState<String | null>(null);
   const [dragState, setDragState] = useState<number | null>(null); // 1-DRAG OVER DOCUMENT, 2-DRAG OVER BUTTON, 3-RELEASED AND UPLOADING
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFileObject[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   const Axios = axios.create({
     baseURL: "http://localhost:3000",
   });
@@ -121,49 +122,6 @@ function App() {
     });
   };
 
-  const uploadFile = (file: File, uploadFileId: string) => {
-    // UPLOAD FILE TO SERVER
-    var formData = new FormData();
-    formData.append("fileContent", file);
-    formData.append("fileId", uploadFileId);
-    let uploadConfig = {
-      headers: {
-        authorization: localStorage.TYFILE_TOKEN ? `Bearer ${localStorage.TYFILE_TOKEN}` : "",
-      },
-      onUploadProgress: (progressEvent: any) => {
-        if (progressEvent.progress === 1) {
-          setUploadingFiles((oldUploadingList) => oldUploadingList.filter((uploadingFile) => uploadFileId !== uploadingFile.id));
-          // FINISH UPLOAD -> REFRESH FILE LIST
-          setTimeout(() => {
-            getFileList();
-          }, 200);
-        } else {
-          // SET THE UPDATE STATUS TO UI
-          setUploadingFiles((oldFileList) =>
-            oldFileList.map((file) => ({
-              ...file,
-              progress: uploadFileId === file.id ? progressEvent.progress : 0,
-              estimated: uploadFileId === file.id && progressEvent.estimated !== undefined ? progressEvent.estimated : null,
-            }))
-          );
-        }
-
-        // console.log("Progress", Math.round((progressEvent.loaded * 100) / progressEvent.total));
-        // console.log("progressEvent", progressEvent);
-      },
-    };
-
-    //@ts-ignore
-    Axios.post("/api/file/upload/", formData, uploadConfig)
-      .then((response: any) => {
-        console.log(response.data);
-      })
-      .catch((err: any) => {
-        console.log("ERROR:", err.message);
-        throw new Error("Cannot upload file");
-      });
-  };
-
   const handleFileUpload = (event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
     setDragState(null);
@@ -178,36 +136,47 @@ function App() {
     console.log(files);
     [...files].forEach((file) => {
       let fileSize = file.size / 1024 / 1024;
-      let errorMsg: string | null = null;
       console.log(fileSize);
-      if (fileSize > 10) {
-        errorMsg = "file is too large";
+      if (fileSize > 10.5) {
+        setErrorMsg(`The file "${file.name}" (${fileSize.toFixed(2)}MB) is larger than 10MB.`);
+        setDialogOpen(true);
+        return;
       }
 
-      // CREATE FILE OBJECT IN DB
-      Axios.post(`/api/file/new`, { fileName: file.name }, axiosConfig)
-        .then((response: any) => {
-          let fileUUID = response.data.id;
-          setUploadingFiles((oldFileList) => {
-            return [
-              ...oldFileList,
-              {
-                id: fileUUID,
-                filename: file.name,
-                progress: 0,
-                estimated: null,
-                errorMsg: errorMsg,
-              },
-            ];
-          });
-
-          if (!errorMsg) {
-            uploadFile(file, fileUUID);
+      // UPLOAD FILE TO SERVER
+      var formData = new FormData();
+      formData.append("fileContent", file);
+      let uploadConfig = {
+        headers: {
+          authorization: localStorage.TYFILE_TOKEN ? `Bearer ${localStorage.TYFILE_TOKEN}` : "",
+        },
+        onUploadProgress: (progressEvent: any) => {
+          if (progressEvent.progress === 1) {
+            setUploadingFiles((oldUploadingList) => oldUploadingList.filter((uploadingFile) => file.name !== uploadingFile.filename));
+            // FINISH UPLOAD -> REFRESH FILE LIST
+            setTimeout(() => {
+              getFileList();
+            }, 200);
+          } else {
+            // SET THE UPDATE STATUS TO UI
+            setUploadingFiles((oldFileList) =>
+              oldFileList.map((oldUploadingFile) => ({
+                ...oldUploadingFile,
+                progress: oldUploadingFile.filename !== file.name ? progressEvent.progress : 0,
+                estimated: oldUploadingFile.filename !== file.name && progressEvent.estimated !== undefined ? progressEvent.estimated : null,
+              }))
+            );
           }
+        },
+      };
+
+      Axios.post("/api/file/upload/", formData, uploadConfig)
+        .then((response: any) => {
+          console.log(response.data);
         })
         .catch((err: any) => {
-          console.error("ERROR:", err.message);
-          throw new Error("Cannot create file");
+          console.log("ERROR:", err.message);
+          throw new Error("Cannot upload file");
         });
     });
   };
@@ -276,6 +245,24 @@ function App() {
           </div>
         )}
       </div>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => {
+          setDialogOpen(false);
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Large file</DialogTitle>
+        <DialogContent sx={{ lineHeight: "2rem" }}>{errorMsg}</DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setDialogOpen(false);
+            }}
+          >
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

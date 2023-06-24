@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const { createNewUser, deleteUser, validateUser, storeFileInfo, findFileByUrl, getFileListByUserId } = require("./db");
+const { validateUser } = require("./db");
 
 const auth = (req, res, next) => {
   try {

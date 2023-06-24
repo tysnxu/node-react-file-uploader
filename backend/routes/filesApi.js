@@ -2,41 +2,74 @@ const express = require("express");
 const router = express.Router();
 const path = require("node:path");
 const auth = require("../lib/auth");
-const { createFile, findFileByUrl, getFileListByUserId, getFileById } = require("../lib/db");
+const { createFile, findFileByUrl, getFileListByUserId, getFileById, updateFile } = require("../lib/db");
+const multer = require("multer");
+const fs = require("fs");
 
-// LOAD UPLOAD API
-const uploadRouter = require("./upload");
-router.use("/upload", uploadRouter);
+const fileStoreLocation = "E:/temp/upload";
+const padNumber = (number) => String(number).padStart(2, "0");
+
+const getDate = () => {
+  let dateNow = new Date();
+  return `${dateNow.getUTCFullYear()}${padNumber(dateNow.getUTCMonth() + 1)}${padNumber(dateNow.getUTCDate())}`;
+};
 
 router.get("/", (req, res) => {
   res.status(200).json({ message: "FILE UPLOAD API ONLINE" });
 });
 
-// CREATE NEW FILE
-router.post("/new", auth, (req, res) => {
+const storage = multer.diskStorage({
+  destination: (req, file, callback) => {
+    const folder = getDate();
+    req.res.locals.folder = folder;
+
+    let fullPathOnDisk = path.join(fileStoreLocation, folder);
+    fs.mkdirSync(fullPathOnDisk, { recursive: true });
+    callback(null, fullPathOnDisk);
+  },
+  filename: (req, file, cb) => {
+    let fileName = Buffer.from(file.originalname, "latin1").toString("utf-8");
+    let folder = req.res.locals.folder;
+
+    const extension = path.extname(fileName);
+    const nameNoExtension = path.parse(fileName).name;
+
+    let tries = 0;
+    let fullFileName = `${nameNoExtension}${extension}`;
+
+    while (fs.existsSync(path.join(fileStoreLocation, folder, fullFileName))) {
+      tries++;
+      fullFileName = `${nameNoExtension}-${tries}${extension}`;
+    }
+
+    // console.log("CONFIRMED:", fullFileName);
+    req.res.locals.fileName = fullFileName;
+    req.res.locals.url = path.join(folder, fullFileName);
+    cb(null, fullFileName);
+  },
+});
+
+router.post("/upload/", auth, multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } }).single("fileContent"), (req, res) => {
   const userId = res.locals.userId; // AUTOMATIC USER ID EXTRACTION
-  const { fileName } = req.body;
-  const padNumber = (number) => String(number).padStart(2, "0");
 
-  let dateNow = new Date();
-  let folder = `${dateNow.getUTCFullYear()}.${padNumber(dateNow.getUTCMonth() + 1)}.${padNumber(dateNow.getUTCDate())}`;
-  let url = path.join(folder, fileName);
+  const fileName = res.locals.fileName; // FROM MULTER
+  // const fileFolder = res.locals.folder; // FROM MULTER
+  const fileURL = res.locals.url; // FROM MULTER
 
-  createFile(fileName, userId, url)
+  // CREATE FILE OBJ IN DB
+  createFile(fileName, userId, fileURL)
     .then((newFile) => {
-      res.status(200).json({
-        fileName: newFile.fileName,
-        id: newFile.id,
-        uploadedAt: newFile.uploadedAt,
-        url: newFile.url,
+      res.send({
+        success: true,
+        file: {
+          fileName: newFile.fileName,
+          id: newFile.id,
+          uploadedAt: newFile.uploadedAt,
+          url: newFile.url,
+        },
       });
     })
-    .catch((err) => {
-      // TODO: CHECK IF THE FILE URL ALREADY EXISTS - IF SO APPEND SHIT TO THE FILE NAME
-      if (err.message.includes("Unique constraint failed on the constraint: `File_url_key`")) {
-        res.status(300).json({ message: "FILE EXISTS" });
-      }
-    });
+    .catch((err) => res.status(500).json({ success: false, message: "Failed to create file in database" }));
 });
 
 router.delete("/file/:id", auth, (req, res) => {

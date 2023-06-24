@@ -48,6 +48,7 @@ const createFile = async (fileName, userId, url) => {
       userId: userId,
       url: url,
       deleted: false,
+      status: "SUCCESSFUL",
     },
   });
 
