@@ -36,6 +36,7 @@ function App() {
 
   const [snackBarOpen, setSnackBarOpen] = useState(false);
   const BACKEND_URL = "http://localhost:3000";
+  const FILE_STORE_URL = "http://localhost/storage/";
 
   const Axios = axios.create({
     baseURL: BACKEND_URL,
@@ -136,6 +137,82 @@ function App() {
     setDialogOpen(true);
   };
 
+  const uploadFile = (file: File) => {
+    let fileSize = file.size / 1024 / 1024;
+
+    // console.log("FILE SIZE:", fileSize);
+    if (fileSize > 10.5) {
+      showDialog(
+        "Large file",
+        <div>
+          The file <b>{`"${file.name}"`}</b> ({fileSize.toFixed(2)}MB) is larger than 10MB, which will not be uploaded.
+        </div>
+      );
+      return;
+    }
+
+    let localUploadID: number;
+
+    setUploadingFiles((oldFilesInList) => {
+      localUploadID = oldFilesInList.length === 0 ? 0 : oldFilesInList[oldFilesInList.length - 1].id + 1;
+
+      return [
+        ...oldFilesInList,
+        {
+          id: localUploadID,
+          filename: file.name,
+          estimated: null,
+          progress: 0,
+          errorMsg: null,
+        },
+      ];
+    });
+
+    var formData = new FormData();
+    formData.append("fileContent", file);
+    let uploadConfig = {
+      headers: {
+        authorization: localStorage.TYFILE_TOKEN ? `Bearer ${localStorage.TYFILE_TOKEN}` : "",
+      },
+      onUploadProgress: (progressEvent: any) => {
+        // console.log("UPLOAD PROGRESS", localUploadID, progressEvent);
+
+        if (progressEvent.progress === 1) {
+          setUploadingFiles((uploadingList) => uploadingList.filter((fileInList) => localUploadID !== fileInList.id));
+          // FINISH UPLOAD -> REFRESH FILE LIST
+          setTimeout(() => {
+            getFileList();
+          }, 200);
+        } else {
+          // SET THE UPDATE STATUS TO UI
+          setUploadingFiles((uploadingList) =>
+            uploadingList.map((fileInList) =>
+              fileInList.id === localUploadID
+                ? {
+                    ...fileInList,
+                    progress: progressEvent.progress,
+                    estimated: progressEvent.estimated !== undefined ? progressEvent.estimated : null,
+                  }
+                : {
+                    ...fileInList,
+                  }
+            )
+          );
+        }
+      },
+    };
+
+    // UPLOAD FILE TO SERVER
+    Axios.post("/api/file/upload/", formData, uploadConfig)
+      .then((response: any) => {
+        console.log(response.data);
+      })
+      .catch((err: any) => {
+        console.log("ERROR:", err.message);
+        throw new Error("Cannot upload file");
+      });
+  };
+
   const handleFileDrop = (event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
     setDragState(null);
@@ -147,86 +224,14 @@ function App() {
       return;
     }
 
-    console.log(files);
+    // console.log(files);
     [...files].forEach((file) => {
-      let fileSize = file.size / 1024 / 1024;
-
-      // console.log("FILE SIZE:", fileSize);
-      if (fileSize > 10.5) {
-        showDialog(
-          "Large file",
-          <div>
-            The file <b>{`"${file.name}"`}</b> ({fileSize.toFixed(2)}MB) is larger than 10MB, which will not be uploaded.
-          </div>
-        );
-        return;
-      }
-
-      let localUploadID: number;
-
-      setUploadingFiles((oldFilesInList) => {
-        localUploadID = oldFilesInList.length === 0 ? 0 : oldFilesInList[oldFilesInList.length - 1].id + 1;
-
-        return [
-          ...oldFilesInList,
-          {
-            id: localUploadID,
-            filename: file.name,
-            estimated: null,
-            progress: 0,
-            errorMsg: null,
-          },
-        ];
-      });
-
-      var formData = new FormData();
-      formData.append("fileContent", file);
-      let uploadConfig = {
-        headers: {
-          authorization: localStorage.TYFILE_TOKEN ? `Bearer ${localStorage.TYFILE_TOKEN}` : "",
-        },
-        onUploadProgress: (progressEvent: any) => {
-          // console.log("UPLOAD PROGRESS", localUploadID, progressEvent);
-
-          if (progressEvent.progress === 1) {
-            setUploadingFiles((uploadingList) => uploadingList.filter((fileInList) => localUploadID !== fileInList.id));
-            // FINISH UPLOAD -> REFRESH FILE LIST
-            setTimeout(() => {
-              getFileList();
-            }, 200);
-          } else {
-            // SET THE UPDATE STATUS TO UI
-            setUploadingFiles((uploadingList) =>
-              uploadingList.map((fileInList) =>
-                fileInList.id === localUploadID
-                  ? {
-                      ...fileInList,
-                      progress: progressEvent.progress,
-                      estimated: progressEvent.estimated !== undefined ? progressEvent.estimated : null,
-                    }
-                  : {
-                      ...fileInList,
-                    }
-              )
-            );
-          }
-        },
-      };
-
-      // UPLOAD FILE TO SERVER
-      Axios.post("/api/file/upload/", formData, uploadConfig)
-        .then((response: any) => {
-          console.log(response.data);
-        })
-        .catch((err: any) => {
-          console.log("ERROR:", err.message);
-          throw new Error("Cannot upload file");
-        });
+      uploadFile(file);
     });
   };
 
   const copyUrl = (url: string) => {
-    navigator.clipboard.writeText(`${BACKEND_URL}//${url}`);
+    navigator.clipboard.writeText(`${FILE_STORE_URL}//${url}`);
     setSnackBarOpen(true);
   };
 
@@ -379,6 +384,10 @@ function App() {
         id="file"
         onChange={(event) => {
           console.log("UPLOAD FILE -> ", event.target.value);
+          if (inputFile.current && inputFile.current.files !== null) {
+            let file = inputFile.current.files[0];
+            uploadFile(file);
+          }
         }}
         ref={inputFile}
         style={{ display: "none" }}
