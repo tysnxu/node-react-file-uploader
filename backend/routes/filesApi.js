@@ -7,6 +7,7 @@ const multer = require("multer");
 const fs = require("fs");
 
 const fileStoreLocation = "E:/temp/upload";
+const deletedFileStore = "E:/temp/deleted";
 const padNumber = (number) => String(number).padStart(2, "0");
 
 const getDate = () => {
@@ -74,20 +75,42 @@ router.post("/upload/", auth, multer({ storage: storage, limits: { fileSize: 10 
     .catch((err) => res.status(500).json({ success: false, message: "Failed to create file in database" }));
 });
 
-router.delete("/file/:id", auth, (req, res) => {
+router.delete("/:id", auth, (req, res) => {
   const userId = res.locals.userId;
-  const fileId = req.id;
+  const fileId = req.params.id;
 
   // TODO: UPDATE THE DATABASE TO SET FILE AS DELETED
 
-  console.log(fileId);
+  getFileById(fileId).then((file) => {
+    console.log(file);
+    let fileURL = file.url;
 
-  // getFileById();
+    if (!file) {
+      res.status(404).json({ success: false, message: "File not found." });
+      return;
+    }
 
-  // getFileListByUserId(userId).then((files) => {
-  //   // console.log(files);
-  //   res.status(200).json({ files: files });
-  // });
+    if (file.userId !== userId) {
+      res.status(403).json({ success: false, message: "You do not own the file." });
+      return;
+    }
+
+    updateFile(fileId, { deleted: true }).then((file) => {
+      let origPath = path.join(fileStoreLocation, fileURL);
+      let deletedPath = path.join(deletedFileStore, fileURL);
+
+      fs.mkdirSync(path.join(deletedFileStore, path.dirname(fileURL)), { recursive: true });
+      fs.rename(origPath, deletedPath, function (err) {
+        if (err) {
+          res.status(500).json({ success: false, message: "Cannot remove file." });
+          return;
+        }
+
+        res.status(200).json({ file: file });
+        return;
+      });
+    });
+  });
 });
 
 module.exports = router;

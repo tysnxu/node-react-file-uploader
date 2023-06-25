@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
-import { Box, IconButton, Typography, Container, List, ListItem, Button, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import { Box, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, useAutocomplete } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
@@ -24,13 +24,18 @@ type UploadingFileObject = {
 function App() {
   const [previousUploads, setPreviousUploads] = useState<FileObject[]>([]);
   const [loggedIn, setLoggedIn] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<String | null>(null);
   const [dragState, setDragState] = useState<number | null>(null); // 1-DRAG OVER DOCUMENT, 2-DRAG OVER BUTTON, 3-RELEASED AND UPLOADING
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFileObject[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState("Large File");
+  const [dialogMessage, setDialogMessage] = useState(<></>);
+  const [dialogButtons, setDialogButtons] = useState(<></>);
+  const dialogConfirmFn = useRef<Function>();
+  const [snackBarOpen, setSnackBarOpen] = useState(false);
+  const BACKEND_URL = "http://localhost:3000";
 
   const Axios = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: BACKEND_URL,
   });
 
   const axiosConfig = {
@@ -107,9 +112,8 @@ function App() {
         if (err.response.data.message === "User not found, login failed") {
           localStorage.clear();
 
-          setErrorMsg("Invalid User, please refresh");
+          showDialog("Error", <div>Failed to fetch user, please refresh</div>);
           setLoggedIn(false);
-          // createUser();
         }
       });
   };
@@ -120,6 +124,13 @@ function App() {
       localStorage.setItem("TYFILE_PREVIOUS_UPLOADS", JSON.stringify([...response.data.files]));
       setPreviousUploads(response.data.files);
     });
+  };
+
+  const showDialog = (title: string, content: any, buttons: any | null = null) => {
+    setDialogTitle(title);
+    setDialogMessage(content);
+    setDialogButtons(buttons);
+    setDialogOpen(true);
   };
 
   const handleFileDrop = (event: React.DragEvent<HTMLElement>) => {
@@ -139,8 +150,12 @@ function App() {
 
       // console.log("FILE SIZE:", fileSize);
       if (fileSize > 10.5) {
-        setErrorMsg(`The file "${file.name}" (${fileSize.toFixed(2)}MB) is larger than 10MB.`);
-        setDialogOpen(true);
+        showDialog(
+          "Large file",
+          <div>
+            The file <b>{`"${file.name}"`}</b> ({fileSize.toFixed(2)}MB) is larger than 10MB, which will not be uploaded.
+          </div>
+        );
         return;
       }
 
@@ -207,6 +222,23 @@ function App() {
     });
   };
 
+  const copyUrl = (url: string) => {
+    navigator.clipboard.writeText(`${BACKEND_URL}//${url}`);
+    setSnackBarOpen(true);
+  };
+
+  const deleteFile = (fileId: string) => {
+    console.log("DELETING", fileId);
+
+    Axios.delete(`/api/file/${fileId}`, axiosConfig)
+      .then((response: any) => {
+        console.log(response.data);
+      })
+      .catch((err: any) => {
+        console.log("ERROR:", err.response.data.message);
+      });
+  };
+
   return (
     <>
       <div className="grid-holder">
@@ -260,10 +292,43 @@ function App() {
             {previousUploads.map((file) => (
               <Box key={file.url} className="file-list-item">
                 <span>{file.fileName}</span>
-                <IconButton style={{ color: "white" }}>
+                <IconButton
+                  style={{ color: "white" }}
+                  onClick={() => {
+                    copyUrl(file.url);
+                  }}
+                >
                   <ContentCopyIcon />
                 </IconButton>
-                <IconButton style={{ color: "white" }}>
+                <IconButton
+                  style={{ color: "white" }}
+                  onClick={() => {
+                    dialogConfirmFn.current = () => {
+                      deleteFile(file.id);
+                      setDialogOpen(false);
+                    };
+                    showDialog(
+                      "Confirm deletion",
+                      <>Are you sure you want to delete the file?</>,
+                      <>
+                        <Button
+                          onClick={() => {
+                            setDialogOpen(false);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            if (dialogConfirmFn.current) dialogConfirmFn.current();
+                          }}
+                        >
+                          Confirm
+                        </Button>
+                      </>
+                    );
+                  }}
+                >
                   <ClearIcon />
                 </IconButton>
               </Box>
@@ -277,18 +342,30 @@ function App() {
           setDialogOpen(false);
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>Large file</DialogTitle>
-        <DialogContent sx={{ lineHeight: "2rem" }}>{errorMsg}</DialogContent>
+        <DialogTitle sx={{ fontWeight: 700 }}>{dialogTitle}</DialogTitle>
+        <DialogContent sx={{ lineHeight: "2rem" }}>{dialogMessage}</DialogContent>
         <DialogActions>
-          <Button
-            onClick={() => {
-              setDialogOpen(false);
-            }}
-          >
-            OK
-          </Button>
+          {dialogButtons === null ? (
+            <Button
+              onClick={() => {
+                setDialogOpen(false);
+              }}
+            >
+              OK
+            </Button>
+          ) : (
+            dialogButtons
+          )}
         </DialogActions>
       </Dialog>
+      <Snackbar
+        open={snackBarOpen}
+        autoHideDuration={2000}
+        onClose={() => {
+          setSnackBarOpen(false);
+        }}
+        message="Link copied to clipboard"
+      />
     </>
   );
 }
