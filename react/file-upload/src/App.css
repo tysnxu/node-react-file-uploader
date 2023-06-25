@@ -10,6 +10,7 @@
 
 body {
   margin: 0;
+  overflow: hidden;
 }
 
 h1 {
@@ -123,8 +124,10 @@ h1 {
 
   overflow: scroll;
 
+  backdrop-filter: blur(30px);
+
   border-radius: var(--radius);
-  background-color: #343434;
+  background-color: #bcbcbc1a;
   padding: 2rem;
 
   /* Hide scrollbar for IE, Edge and Firefox */
@@ -212,6 +215,26 @@ h1 {
 
   margin: 0.8rem 0;
   margin-right: auto;
+}
+
+.text-logo-section {
+  position: absolute;
+  transform: translateY(5rem);
+}
+
+.logo-text-svg {
+  pointer-events: none;
+  height: 2rem;
+  transform: translateY(0.7rem);
+}
+
+.logo-svg {
+  position: absolute;
+  pointer-events: none;
+  height: 50rem;
+  opacity: 0.1;
+  bottom: -10rem;
+  right: 0rem;
 }
 
 @media screen and (max-width:1000px) {

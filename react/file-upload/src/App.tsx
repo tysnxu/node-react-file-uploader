@@ -254,7 +254,7 @@ function App() {
   return (
     <>
       <div className="grid-holder">
-        <div>
+        <div className="upload-btn-section">
           <h1>File Uploader</h1>
           <div
             className={dragState === null ? "upload-button" : dragState === 1 ? "upload-button--hint-land" : "upload-button--ready-release"}
@@ -274,6 +274,10 @@ function App() {
             )}
           </div>
           <p>Maximum 10MB allowed</p>
+          <div className="text-logo-section">
+            by
+            <img className="logo-text-svg" src="./images/tysnxu_text.svg" alt="" />
+          </div>
         </div>
         {!(uploadingFiles.length === 0 && previousUploads.length === 0) && (
           <div className="uploads-table">
@@ -392,6 +396,7 @@ function App() {
         ref={inputFile}
         style={{ display: "none" }}
       />
+      <img className="logo-svg" src="./images/tysnxu_logo.svg" alt="" />
     </>
   );
 }
