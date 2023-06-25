@@ -14,7 +14,7 @@ type FileObject = {
 };
 
 type UploadingFileObject = {
-  id: string;
+  id: number;
   filename: string;
   estimated: number | null;
   progress: number;
@@ -122,7 +122,7 @@ function App() {
     });
   };
 
-  const handleFileUpload = (event: React.DragEvent<HTMLElement>) => {
+  const handleFileDrop = (event: React.DragEvent<HTMLElement>) => {
     event.preventDefault();
     setDragState(null);
 
@@ -136,14 +136,31 @@ function App() {
     console.log(files);
     [...files].forEach((file) => {
       let fileSize = file.size / 1024 / 1024;
-      console.log(fileSize);
+
+      // console.log("FILE SIZE:", fileSize);
       if (fileSize > 10.5) {
         setErrorMsg(`The file "${file.name}" (${fileSize.toFixed(2)}MB) is larger than 10MB.`);
         setDialogOpen(true);
         return;
       }
 
-      // UPLOAD FILE TO SERVER
+      let localUploadID: number;
+
+      setUploadingFiles((oldFilesInList) => {
+        localUploadID = oldFilesInList.length === 0 ? 0 : oldFilesInList[oldFilesInList.length - 1].id + 1;
+
+        return [
+          ...oldFilesInList,
+          {
+            id: localUploadID,
+            filename: file.name,
+            estimated: null,
+            progress: 0,
+            errorMsg: null,
+          },
+        ];
+      });
+
       var formData = new FormData();
       formData.append("fileContent", file);
       let uploadConfig = {
@@ -151,25 +168,34 @@ function App() {
           authorization: localStorage.TYFILE_TOKEN ? `Bearer ${localStorage.TYFILE_TOKEN}` : "",
         },
         onUploadProgress: (progressEvent: any) => {
+          console.log("UPLOAD PROGRESS", localUploadID, progressEvent);
+
           if (progressEvent.progress === 1) {
-            setUploadingFiles((oldUploadingList) => oldUploadingList.filter((uploadingFile) => file.name !== uploadingFile.filename));
+            setUploadingFiles((uploadingList) => uploadingList.filter((fileInList) => localUploadID !== fileInList.id));
             // FINISH UPLOAD -> REFRESH FILE LIST
             setTimeout(() => {
               getFileList();
             }, 200);
           } else {
             // SET THE UPDATE STATUS TO UI
-            setUploadingFiles((oldFileList) =>
-              oldFileList.map((oldUploadingFile) => ({
-                ...oldUploadingFile,
-                progress: oldUploadingFile.filename !== file.name ? progressEvent.progress : 0,
-                estimated: oldUploadingFile.filename !== file.name && progressEvent.estimated !== undefined ? progressEvent.estimated : null,
-              }))
+            setUploadingFiles((uploadingList) =>
+              uploadingList.map((fileInList) =>
+                fileInList.id === localUploadID
+                  ? {
+                      ...fileInList,
+                      progress: progressEvent.progress,
+                      estimated: progressEvent.estimated !== undefined ? progressEvent.estimated : null,
+                    }
+                  : {
+                      ...fileInList,
+                    }
+              )
             );
           }
         },
       };
 
+      // UPLOAD FILE TO SERVER
       Axios.post("/api/file/upload/", formData, uploadConfig)
         .then((response: any) => {
           console.log(response.data);
@@ -188,7 +214,7 @@ function App() {
           <h1>File Uploader</h1>
           <div
             className={dragState === null ? "upload-button" : dragState === 1 ? "upload-button--hint-land" : "upload-button--ready-release"}
-            onDrop={handleFileUpload}
+            onDrop={handleFileDrop}
             onDragOver={(event) => {
               event.preventDefault();
             }}
@@ -210,7 +236,7 @@ function App() {
               <>
                 <h2>Uploading ({uploadingFiles.length})</h2>
                 {uploadingFiles.map((uploadingFile) => (
-                  <div className="uploading-file-section">
+                  <div key={uploadingFile.id} className="uploading-file-section">
                     <p>{uploadingFile.filename}</p>
                     <div className="progress-bar-holder">
                       <div className="progress-bar">
@@ -220,7 +246,7 @@ function App() {
                     </div>
                     {uploadingFile.estimated &&
                       (uploadingFile.estimated < 60 ? (
-                        <p className="estimated-time">Estimated: {uploadingFile.estimated?.toFixed(2)}s</p>
+                        <p className="estimated-time">Estimated: {Math.floor(uploadingFile.estimated)}s</p>
                       ) : (
                         <p className="estimated-time">
                           Estimated: {Math.floor(uploadingFile.estimated / 60)}m {Math.floor(uploadingFile.estimated % 60)}s
