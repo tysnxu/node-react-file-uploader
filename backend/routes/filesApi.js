@@ -20,10 +20,12 @@ router.get("/", (req, res) => {
 
 const storage = multer.diskStorage({
   destination: (req, file, callback) => {
-    const folder = getDate();
-    req.res.locals.folder = folder;
+    const userId = req.res.locals.userId;
 
-    let fullPathOnDisk = path.join(fileStoreLocation, folder);
+    const relativePath = path.join(userId, getDate());
+    req.res.locals.folder = relativePath;
+
+    let fullPathOnDisk = path.join(fileStoreLocation, relativePath);
     fs.mkdirSync(fullPathOnDisk, { recursive: true });
     callback(null, fullPathOnDisk);
   },
