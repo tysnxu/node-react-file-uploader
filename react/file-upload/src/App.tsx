@@ -26,11 +26,14 @@ function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [dragState, setDragState] = useState<number | null>(null); // 1-DRAG OVER DOCUMENT, 2-DRAG OVER BUTTON, 3-RELEASED AND UPLOADING
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFileObject[]>([]);
+  const inputFile = useRef<HTMLInputElement | null>(null);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState("Large File");
   const [dialogMessage, setDialogMessage] = useState(<></>);
   const [dialogButtons, setDialogButtons] = useState(<></>);
   const dialogConfirmFn = useRef<Function>();
+
   const [snackBarOpen, setSnackBarOpen] = useState(false);
   const BACKEND_URL = "http://localhost:3000";
 
@@ -183,7 +186,7 @@ function App() {
           authorization: localStorage.TYFILE_TOKEN ? `Bearer ${localStorage.TYFILE_TOKEN}` : "",
         },
         onUploadProgress: (progressEvent: any) => {
-          console.log("UPLOAD PROGRESS", localUploadID, progressEvent);
+          // console.log("UPLOAD PROGRESS", localUploadID, progressEvent);
 
           if (progressEvent.progress === 1) {
             setUploadingFiles((uploadingList) => uploadingList.filter((fileInList) => localUploadID !== fileInList.id));
@@ -227,12 +230,16 @@ function App() {
     setSnackBarOpen(true);
   };
 
+  const handlePickFile = () => {
+    if (inputFile.current) inputFile.current.click();
+  };
+
   const deleteFile = (fileId: string) => {
     console.log("DELETING", fileId);
 
     Axios.delete(`/api/file/${fileId}`, axiosConfig)
       .then((response: any) => {
-        console.log(response.data);
+        getFileList();
       })
       .catch((err: any) => {
         console.log("ERROR:", err.response.data.message);
@@ -250,6 +257,7 @@ function App() {
             onDragOver={(event) => {
               event.preventDefault();
             }}
+            onClick={handlePickFile}
           >
             {dragState === null && <span className="btn-title">Drag a file here</span>}
             {dragState === 1 && <span className="btn-title--dragged">Drop file here</span>}
@@ -365,6 +373,15 @@ function App() {
           setSnackBarOpen(false);
         }}
         message="Link copied to clipboard"
+      />
+      <input
+        type="file"
+        id="file"
+        onChange={(event) => {
+          console.log("UPLOAD FILE -> ", event.target.value);
+        }}
+        ref={inputFile}
+        style={{ display: "none" }}
       />
     </>
   );
