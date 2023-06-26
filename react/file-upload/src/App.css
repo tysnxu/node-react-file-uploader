@@ -248,3 +248,22 @@ h1 {
     font-size: 8pt;
   }
 }
+
+@media screen and (max-width:560px) {
+  :root {
+    font-size: 8pt;
+  }
+
+  .grid-holder {
+    flex-direction: column;
+  }
+
+  .text-logo-section {
+    display: none;
+  }
+
+  .upload-btn-section {
+    height: unset;
+  }
+
+}
