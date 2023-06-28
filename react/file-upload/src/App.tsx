@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, forwardRef } from "react";
 import "./App.css";
-import { Box, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, useAutocomplete } from "@mui/material";
+import { Box, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Typography, Divider, Toolbar, AppBar, List, ListItem, ListItemText } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
+import CloseIcon from "@mui/icons-material/Close";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import Slide from "@mui/material/Slide";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+import { TransitionProps } from "@mui/material/transitions";
 
 import axios from "axios";
 
@@ -21,6 +25,21 @@ type UploadingFileObject = {
   errorMsg: string | null;
 };
 
+const Transition = forwardRef(function Transition(
+  props: TransitionProps & {
+    children: React.ReactElement;
+  },
+  ref: React.Ref<unknown>
+) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
+const darkTheme = createTheme({
+  palette: {
+    mode: "dark",
+  },
+});
+
 function App() {
   const [previousUploads, setPreviousUploads] = useState<FileObject[]>([]);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -32,6 +51,8 @@ function App() {
   const [dialogTitle, setDialogTitle] = useState("Large File");
   const [dialogMessage, setDialogMessage] = useState(<></>);
   const [dialogButtons, setDialogButtons] = useState(<></>);
+
+  const [fileDrawerOpen, setFileDrawerOpen] = useState(false);
   const dialogConfirmFn = useRef<Function>();
 
   const [snackBarOpen, setSnackBarOpen] = useState(false);
@@ -253,150 +274,206 @@ function App() {
 
   return (
     <>
-      <div className="grid-holder">
-        <div className="upload-btn-section">
-          <h1>File Uploader</h1>
-          <div
-            className={dragState === null ? "upload-button" : dragState === 1 ? "upload-button--hint-land" : "upload-button--ready-release"}
-            onDrop={handleFileDrop}
-            onDragOver={(event) => {
-              event.preventDefault();
-            }}
-            onClick={handlePickFile}
-          >
-            {dragState === null && <span className="btn-title">Drag a file here</span>}
-            {dragState === 1 && <span className="btn-title--dragged">Drop file here</span>}
-            {dragState === 2 && <span className="btn-title--dragged">Release to upload</span>}
-            {dragState === null && (
-              <>
-                or <span className="btn-underline">select a file</span>
-              </>
-            )}
-          </div>
-          <p>Maximum 10MB allowed</p>
-          <div className="text-logo-section">
-            by
-            <img className="logo-text-svg" src="./images/tysnxu_text.svg" alt="" />
-          </div>
-        </div>
-        {!(uploadingFiles.length === 0 && previousUploads.length === 0) && (
-          <div className="uploads-table">
-            {uploadingFiles.length !== 0 && (
-              <>
-                <h2>Uploading ({uploadingFiles.length})</h2>
-                {uploadingFiles.map((uploadingFile) => (
-                  <div key={uploadingFile.id} className="uploading-file-section">
-                    <p>{uploadingFile.filename}</p>
-                    <div className="progress-bar-holder">
-                      <div className="progress-bar">
-                        <div className="progress-indicator" style={{ width: `${uploadingFile.progress * 100}%` }}></div>
-                      </div>
-                      {Math.floor(uploadingFile.progress * 100)}%
-                    </div>
-                    {uploadingFile.estimated &&
-                      (uploadingFile.estimated < 60 ? (
-                        <p className="estimated-time">Estimated: {Math.floor(uploadingFile.estimated)}s</p>
-                      ) : (
-                        <p className="estimated-time">
-                          Estimated: {Math.floor(uploadingFile.estimated / 60)}m {Math.floor(uploadingFile.estimated % 60)}s
-                        </p>
-                      ))}
-                  </div>
-                ))}
-              </>
-            )}
-            <h2>Past Uploads ({previousUploads.length})</h2>
-            {previousUploads.map((file) => (
-              <Box key={file.url} className="file-list-item">
-                <span>{file.fileName}</span>
-                <IconButton
-                  style={{ color: "white" }}
-                  onClick={() => {
-                    copyUrl(file.url);
-                  }}
-                >
-                  <ContentCopyIcon />
-                </IconButton>
-                <IconButton
-                  style={{ color: "white" }}
-                  onClick={() => {
-                    dialogConfirmFn.current = () => {
-                      deleteFile(file.id);
-                      setDialogOpen(false);
-                    };
-                    showDialog(
-                      "Confirm deletion",
-                      <>Are you sure you want to delete the file?</>,
-                      <>
-                        <Button
-                          onClick={() => {
-                            setDialogOpen(false);
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            if (dialogConfirmFn.current) dialogConfirmFn.current();
-                          }}
-                        >
-                          Confirm
-                        </Button>
-                      </>
-                    );
-                  }}
-                >
-                  <ClearIcon />
-                </IconButton>
-              </Box>
-            ))}
-          </div>
-        )}
-      </div>
-      <Dialog
-        open={dialogOpen}
-        onClose={() => {
-          setDialogOpen(false);
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>{dialogTitle}</DialogTitle>
-        <DialogContent sx={{ lineHeight: "2rem" }}>{dialogMessage}</DialogContent>
-        <DialogActions>
-          {dialogButtons === null ? (
-            <Button
-              onClick={() => {
-                setDialogOpen(false);
+      <ThemeProvider theme={darkTheme}>
+        <div className="grid-holder">
+          <div className="upload-btn-section">
+            <h1>File Uploader</h1>
+            <div
+              className={dragState === null ? "upload-button" : dragState === 1 ? "upload-button--hint-land" : "upload-button--ready-release"}
+              onDrop={handleFileDrop}
+              onDragOver={(event) => {
+                event.preventDefault();
               }}
+              onClick={handlePickFile}
             >
-              OK
-            </Button>
-          ) : (
-            dialogButtons
+              {dragState === null && <span className="btn-title">Drag a file here</span>}
+              {dragState === 1 && <span className="btn-title--dragged">Drop file here</span>}
+              {dragState === 2 && <span className="btn-title--dragged">Release to upload</span>}
+              {dragState === null && (
+                <>
+                  <span>or </span>
+                  <span className="btn-underline">select a file</span>
+                  <span className="btn-mobile">Upload File</span>
+                </>
+              )}
+            </div>
+            <p>Maximum 10MB allowed</p>
+            <div className="text-logo-section">
+              by
+              <img className="logo-text-svg" src="./images/tysnxu_text.svg" alt="" />
+            </div>
+          </div>
+          {!(uploadingFiles.length === 0 && previousUploads.length === 0) && (
+            <>
+              <div className="uploads-table">
+                {uploadingFiles.length !== 0 && (
+                  <>
+                    <h2>Uploading ({uploadingFiles.length})</h2>
+                    {uploadingFiles.map((uploadingFile) => (
+                      <div key={uploadingFile.id} className="uploading-file-section">
+                        <p>{uploadingFile.filename}</p>
+                        <div className="progress-bar-holder">
+                          <div className="progress-bar">
+                            <div className="progress-indicator" style={{ width: `${uploadingFile.progress * 100}%` }}></div>
+                          </div>
+                          {Math.floor(uploadingFile.progress * 100)}%
+                        </div>
+                        {uploadingFile.estimated &&
+                          (uploadingFile.estimated < 60 ? (
+                            <p className="estimated-time">Estimated: {Math.floor(uploadingFile.estimated)}s</p>
+                          ) : (
+                            <p className="estimated-time">
+                              Estimated: {Math.floor(uploadingFile.estimated / 60)}m {Math.floor(uploadingFile.estimated % 60)}s
+                            </p>
+                          ))}
+                      </div>
+                    ))}
+                  </>
+                )}
+                <h2>Past Uploads ({previousUploads.length})</h2>
+                {previousUploads.map((file) => (
+                  <Box key={file.url} className="file-list-item">
+                    <span>{file.fileName}</span>
+                    <IconButton
+                      style={{ color: "white" }}
+                      onClick={() => {
+                        copyUrl(file.url);
+                      }}
+                    >
+                      <ContentCopyIcon />
+                    </IconButton>
+                    <IconButton
+                      style={{ color: "white" }}
+                      onClick={() => {
+                        dialogConfirmFn.current = () => {
+                          deleteFile(file.id);
+                          setDialogOpen(false);
+                        };
+                        showDialog(
+                          "Confirm deletion",
+                          <>Are you sure you want to delete the file?</>,
+                          <>
+                            <Button
+                              onClick={() => {
+                                setDialogOpen(false);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                if (dialogConfirmFn.current) dialogConfirmFn.current();
+                              }}
+                            >
+                              Confirm
+                            </Button>
+                          </>
+                        );
+                      }}
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </Box>
+                ))}
+              </div>
+              <Box
+                className="uploads-table--btn-mobile"
+                onClick={() => {
+                  setFileDrawerOpen(true);
+                }}
+              >
+                Past Uploads ({previousUploads.length})
+              </Box>
+            </>
           )}
-        </DialogActions>
-      </Dialog>
-      <Snackbar
-        open={snackBarOpen}
-        autoHideDuration={2000}
-        onClose={() => {
-          setSnackBarOpen(false);
-        }}
-        message="Link copied to clipboard"
-      />
-      <input
-        type="file"
-        id="file"
-        onChange={(event) => {
-          console.log("UPLOAD FILE -> ", event.target.value);
-          if (inputFile.current && inputFile.current.files !== null) {
-            let file = inputFile.current.files[0];
-            uploadFile(file);
-          }
-        }}
-        ref={inputFile}
-        style={{ display: "none" }}
-      />
-      <img className="logo-svg" src="./images/tysnxu_logo.svg" alt="" />
+        </div>
+        <Dialog
+          open={dialogOpen}
+          onClose={() => {
+            setDialogOpen(false);
+          }}
+        >
+          <DialogTitle sx={{ fontWeight: 700 }}>{dialogTitle}</DialogTitle>
+          <DialogContent sx={{ lineHeight: "2rem" }}>{dialogMessage}</DialogContent>
+          <DialogActions>
+            {dialogButtons === null ? (
+              <Button
+                onClick={() => {
+                  setDialogOpen(false);
+                }}
+              >
+                OK
+              </Button>
+            ) : (
+              dialogButtons
+            )}
+          </DialogActions>
+        </Dialog>
+        <Snackbar
+          open={snackBarOpen}
+          autoHideDuration={2000}
+          onClose={() => {
+            setSnackBarOpen(false);
+          }}
+          message="Link copied to clipboard"
+        />
+        <input
+          type="file"
+          id="file"
+          onChange={(event) => {
+            console.log("UPLOAD FILE -> ", event.target.value);
+            if (inputFile.current && inputFile.current.files !== null) {
+              let file = inputFile.current.files[0];
+              uploadFile(file);
+            }
+          }}
+          ref={inputFile}
+          style={{ display: "none" }}
+        />
+        <Dialog
+          fullScreen
+          open={fileDrawerOpen}
+          onClose={() => {
+            setFileDrawerOpen(false);
+          }}
+          TransitionComponent={Transition}
+        >
+          <AppBar sx={{ position: "relative" }}>
+            <Toolbar>
+              <IconButton
+                edge="start"
+                color="inherit"
+                onClick={() => {
+                  setFileDrawerOpen(false);
+                }}
+                aria-label="close"
+              >
+                <CloseIcon />
+              </IconButton>
+              <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
+                Previous Uploads
+              </Typography>
+            </Toolbar>
+          </AppBar>
+          <List>
+            {previousUploads.map((previousFile) => (
+              <>
+                <ListItem
+                  button
+                  onClick={() => {
+                    copyUrl(previousFile.url);
+                  }}
+                >
+                  <ListItemText primary={previousFile.fileName} secondary={previousFile.uploadedAt} />
+                </ListItem>
+                <Divider />
+              </>
+            ))}
+          </List>
+        </Dialog>
+        <img className="logo-text-svg--mobile" src="./images/tysnxu_text.svg" alt="" />
+        <img className="logo-svg" src="./images/tysnxu_logo.svg" alt="" />
+      </ThemeProvider>
     </>
   );
 }

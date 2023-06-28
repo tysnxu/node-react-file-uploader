@@ -52,7 +52,7 @@ const storage = multer.diskStorage({
   },
 });
 
-router.post("/upload/", auth, multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } }).single("fileContent"), (req, res) => {
+router.post("/upload/", auth, multer({ storage: storage, limits: { fileSize: 11 * 1024 * 1024 } }).single("fileContent"), (req, res) => {
   const userId = res.locals.userId; // AUTOMATIC USER ID EXTRACTION
 
   const fileName = res.locals.fileName; // FROM MULTER

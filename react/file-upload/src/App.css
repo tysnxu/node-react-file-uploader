@@ -11,6 +11,7 @@
 body {
   margin: 0;
   overflow: hidden;
+  /* box-shadow: inset 0px 0px 0px 2px #f00; */
 }
 
 h1 {
@@ -36,7 +37,7 @@ h1 {
   margin: auto 0;
 }
 
-.grid-holder>div:nth-child(1) {
+.upload-btn-section {
   margin-right: 5vw;
 }
 
@@ -57,6 +58,7 @@ h1 {
   border-radius: var(--radius);
 
   margin: 1.2rem 0;
+  margin-right: 5rem;
 
   padding: 1.6rem 2rem;
   padding-top: 1.2rem;
@@ -97,6 +99,10 @@ h1 {
   pointer-events: none;
 }
 
+.upload-button .btn-mobile {
+  display: none;
+}
+
 .btn-title,
 .btn-title--dragged {
   display: block;
@@ -116,6 +122,7 @@ h1 {
 .btn-underline {
   text-decoration: underline;
 }
+
 
 .uploads-table {
   min-height: 20rem;
@@ -237,25 +244,90 @@ h1 {
   right: 0rem;
 }
 
+.logo-text-svg--mobile {
+  display: none;
+}
+
+.uploads-table--btn-mobile {
+  display: none;
+}
+
+
 @media screen and (max-width:1000px) {
   :root {
     font-size: 10pt;
   }
 }
 
-@media screen and (max-width:780px) {
+@media screen and (max-width:800px) {
   :root {
     font-size: 8pt;
   }
 }
 
-@media screen and (max-width:560px) {
+@media screen and (max-width:660px) {
   :root {
-    font-size: 8pt;
+    font-size: 10pt;
   }
 
   .grid-holder {
+    display: flex;
     flex-direction: column;
+    height: 80vh;
+    margin-top: 10vh;
+  }
+
+  .grid-holder>div {
+    flex: none;
+    margin: auto;
+  }
+
+  .upload-btn-section h1 {
+    margin-bottom: 5rem;
+  }
+
+  .uploads-table--btn-mobile {
+    display: block;
+    font-size: 1.5rem;
+
+    margin: auto;
+    padding: 1.4rem 2.2rem;
+
+    background-color: #171717;
+    border-radius: var(--radius);
+  }
+
+  .uploads-table {
+    display: none;
+  }
+
+  .upload-btn-section {
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+  }
+
+  .upload-button {
+    margin: 0;
+    background-color: white;
+  }
+
+  .upload-button:hover {
+    transform: none;
+  }
+
+  .upload-button * {
+    display: none;
+  }
+
+  .upload-button .btn-mobile {
+    display: block;
+    text-decoration: none;
+    text-align: center;
+
+    font-size: 1.8rem;
+    font-weight: bold;
   }
 
   .text-logo-section {
@@ -266,4 +338,21 @@ h1 {
     height: unset;
   }
 
+  .logo-text-svg--mobile {
+    display: block;
+
+    position: absolute;
+    height: 3rem;
+
+    left: 50vw;
+    transform: translateX(-50%);
+
+  }
+
+}
+
+@media screen and (max-width:340px) {
+  :root {
+    font-size: 8pt;
+  }
 }
