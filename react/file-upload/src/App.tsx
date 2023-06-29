@@ -127,7 +127,7 @@ function App() {
 
   const login = () => {
     Axios.post(`/api/user/login`, {}, axiosConfig)
-      .then((response: any) => {
+      .then(() => {
         // console.log(response.data);
         setLoggedIn(true);
       })
@@ -264,7 +264,7 @@ function App() {
     console.log("DELETING", fileId);
 
     Axios.delete(`/api/file/${fileId}`, axiosConfig)
-      .then((response: any) => {
+      .then(() => {
         getFileList();
       })
       .catch((err: any) => {
