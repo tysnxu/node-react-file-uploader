@@ -56,8 +56,8 @@ function App() {
   const dialogConfirmFn = useRef<Function>();
 
   const [snackBarOpen, setSnackBarOpen] = useState(false);
-  const BACKEND_URL = "http://localhost:3000";
-  const FILE_STORE_URL = "http://localhost/storage/";
+  const BACKEND_URL = "http://16.162.47.31:3000/";
+  const FILE_STORE_URL = "http://16.162.47.31/storage/";
 
   const Axios = axios.create({
     baseURL: BACKEND_URL,
