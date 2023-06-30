@@ -92,10 +92,16 @@ function App() {
 
     document.addEventListener("dragenter", (event) => {
       // event.preventDefault();
-      if ((event.target as HTMLElement).classList.contains("grid-holder")) {
-        setDragState(1);
-      } else if ((event.target as HTMLElement).classList.contains("upload-button--hint-land")) {
+      // if ((event.target as HTMLElement).classList.contains("grid-holder")) {
+      //   setDragState(1);
+      // } else if ((event.target as HTMLElement).classList.contains("upload-button--hint-land")) {
+      //   setDragState(2);
+      // }
+
+      if ((event.target as HTMLElement).classList.contains("upload-button--hint-land")) {
         setDragState(2);
+      } else {
+        setDragState(1);
       }
     });
   }, []);
@@ -255,11 +261,11 @@ function App() {
     let stringToCopy = `${FILE_STORE_URL}//${url}`;
     try {
       navigator.clipboard.writeText(stringToCopy);
+      setSnackBarOpen(true);
     } catch (e) {
       // console.log(e);
       alert(stringToCopy);
     }
-    setSnackBarOpen(true);
   };
 
   const handlePickFile = () => {
@@ -340,7 +346,7 @@ function App() {
                 {previousUploads.map((file) => (
                   <Box key={file.url} className="file-list-item">
                     {/* <span>{file.fileName}</span> */}
-                    <Link href={`${FILE_STORE_URL}//${file.url}`} color="inherit">
+                    <Link href={`${FILE_STORE_URL}//${file.url}`} target="_blank" color="inherit">
                       {file.fileName}
                     </Link>
                     <IconButton
