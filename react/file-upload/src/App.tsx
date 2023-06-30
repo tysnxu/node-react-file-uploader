@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, forwardRef } from "react";
 import "./App.css";
-import { Box, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Typography, Divider, Toolbar, AppBar, List, ListItem, ListItemText } from "@mui/material";
+import { Box, IconButton, Button, Dialog, DialogTitle, DialogContent, DialogActions, Snackbar, Typography, Divider, Toolbar, AppBar, List, ListItem, ListItemText, Link } from "@mui/material";
 import ClearIcon from "@mui/icons-material/Clear";
 import CloseIcon from "@mui/icons-material/Close";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -57,7 +57,7 @@ function App() {
 
   const [snackBarOpen, setSnackBarOpen] = useState(false);
   const BACKEND_URL = "http://16.162.47.31:3000/";
-  const FILE_STORE_URL = "http://16.162.47.31/storage/";
+  const FILE_STORE_URL = "http://16.162.47.31/storage/tyFile/";
 
   const Axios = axios.create({
     baseURL: BACKEND_URL,
@@ -252,7 +252,13 @@ function App() {
   };
 
   const copyUrl = (url: string) => {
-    navigator.clipboard.writeText(`${FILE_STORE_URL}//${url}`);
+    let stringToCopy = `${FILE_STORE_URL}//${url}`;
+    try {
+      navigator.clipboard.writeText(stringToCopy);
+    } catch (e) {
+      // console.log(e);
+      alert(stringToCopy);
+    }
     setSnackBarOpen(true);
   };
 
@@ -333,7 +339,10 @@ function App() {
                 <h2>Past Uploads ({previousUploads.length})</h2>
                 {previousUploads.map((file) => (
                   <Box key={file.url} className="file-list-item">
-                    <span>{file.fileName}</span>
+                    {/* <span>{file.fileName}</span> */}
+                    <Link href={`${FILE_STORE_URL}//${file.url}`} color="inherit">
+                      {file.fileName}
+                    </Link>
                     <IconButton
                       style={{ color: "white" }}
                       onClick={() => {
@@ -460,8 +469,10 @@ function App() {
               <>
                 <ListItem
                   button
+                  key={previousFile.url}
                   onClick={() => {
-                    copyUrl(previousFile.url);
+                    // copyUrl(previousFile.url);
+                    window.open(`${FILE_STORE_URL}//${previousFile.url}`, "_blank");
                   }}
                 >
                   <ListItemText primary={previousFile.fileName} secondary={previousFile.uploadedAt} />
@@ -473,6 +484,7 @@ function App() {
         </Dialog>
         <img className="logo-text-svg--mobile" src="./images/tysnxu_text.svg" alt="" />
         <img className="logo-svg" src="./images/tysnxu_logo.svg" alt="" />
+        <div style={{ display: "none" }} id="area_for_append_copystuff"></div>
       </ThemeProvider>
     </>
   );
