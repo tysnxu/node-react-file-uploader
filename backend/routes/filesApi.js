@@ -2,12 +2,12 @@ const express = require("express");
 const router = express.Router();
 const path = require("node:path");
 const auth = require("../lib/auth");
-const { createFile, findFileByUrl, getFileListByUserId, getFileById, updateFile } = require("../lib/db");
+const { createFile, getFileById, updateFile } = require("../lib/db");
 const multer = require("multer");
 const fs = require("fs");
 
-const fileStoreLocation = "E:/temp/upload";
-const deletedFileStore = "E:/temp/deleted";
+const fileStoreLocation = process.env.FILE_STORE_LOCATION; //"E:/temp/upload";
+const deletedFileStore = process.env.DELETED_FILE_LOCATION; // "E:/temp/deleted";
 const padNumber = (number) => String(number).padStart(2, "0");
 
 const getDate = () => {
@@ -78,8 +78,6 @@ router.post("/upload/", auth, multer({ storage: storage, limits: { fileSize: 11 
 router.delete("/:id", auth, (req, res) => {
   const userId = res.locals.userId;
   const fileId = req.params.id;
-
-  // TODO: UPDATE THE DATABASE TO SET FILE AS DELETED
 
   getFileById(fileId).then((file) => {
     console.log(file);
