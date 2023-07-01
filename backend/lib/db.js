@@ -70,6 +70,11 @@ const getFileListByUserId = async (userId) => {
     where: {
       userId: userId,
     },
+    orderBy: [
+      {
+        uploadedAt: "desc",
+      },
+    ],
   });
 
   return file;
