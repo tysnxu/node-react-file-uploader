@@ -256,13 +256,14 @@ function App() {
   };
 
   const copyUrl = (url: string) => {
-    let stringToCopy = `${FILE_STORE_URL}//${url}`;
+    let stringToCopy = `${FILE_STORE_URL}/${url}`;
     try {
       navigator.clipboard.writeText(stringToCopy);
       setSnackBarOpen(true);
     } catch (e) {
       // console.log(e);
-      alert(stringToCopy);
+      // Without HTTPS, cannot copy to clipboard
+      alert(`Copy to clipboard is unsupported for http connections, please manually copy this link: ${stringToCopy}`);
     }
   };
 
