@@ -56,8 +56,8 @@ function App() {
   const dialogConfirmFn = useRef<Function>();
 
   const [snackBarOpen, setSnackBarOpen] = useState(false);
-  const BACKEND_URL = "http://16.162.47.31:3000/";
-  const FILE_STORE_URL = "http://16.162.47.31/storage/tyFile/";
+  const BACKEND_URL = "http://18.162.97.23:3000/";
+  const FILE_STORE_URL = "http://18.162.97.23/storage/tyFile/";
 
   const Axios = axios.create({
     baseURL: BACKEND_URL,
@@ -207,9 +207,7 @@ function App() {
         if (progressEvent.progress === 1) {
           setUploadingFiles((uploadingList) => uploadingList.filter((fileInList) => localUploadID !== fileInList.id));
           // FINISH UPLOAD -> REFRESH FILE LIST
-          setTimeout(() => {
-            getFileList();
-          }, 200);
+          getFileList();
         } else {
           // SET THE UPDATE STATUS TO UI
           setUploadingFiles((uploadingList) =>
