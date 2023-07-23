@@ -97,7 +97,7 @@ router.delete("/:id", auth, (req, res) => {
       let origPath = path.join(fileStoreLocation, fileURL);
       let deletedPath = path.join(deletedFileStore, fileURL);
 
-      fs.mkdirSync(path.join(deletedFileStore, path.dirname(fileURL)), { recursive: true });
+      fs.mkdirSync(path.join(path.dirname(deletedPath)), { recursive: true });
       fs.rename(origPath, deletedPath, function (err) {
         if (err) {
           res.status(500).json({ success: false, message: "Cannot remove file." });
