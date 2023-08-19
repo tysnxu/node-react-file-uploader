@@ -168,11 +168,11 @@ function App() {
     let fileSize = file.size / 1024 / 1024;
 
     // console.log("FILE SIZE:", fileSize);
-    if (fileSize > 10.5) {
+    if (fileSize > 20) {
       showDialog(
         "Large file",
         <div>
-          The file <b>{`"${file.name}"`}</b> ({fileSize.toFixed(2)}MB) is larger than 10MB, which will not be uploaded.
+          The file <b>{`"${file.name}"`}</b> ({fileSize.toFixed(2)}MB) is larger than 20MB, which will not be uploaded.
         </div>
       );
       return;
@@ -229,9 +229,7 @@ function App() {
 
     // UPLOAD FILE TO SERVER
     Axios.post("/api/file/upload/", formData, uploadConfig)
-      .then((response: any) => {
-        console.log(response.data);
-      })
+      .then((response: any) => console.log(response.data))
       .catch((err: any) => {
         console.log("ERROR:", err.message);
         throw new Error("Cannot upload file");
@@ -250,9 +248,7 @@ function App() {
     }
 
     // console.log(files);
-    [...files].forEach((file) => {
-      uploadFile(file);
-    });
+    [...files].forEach((file) => uploadFile(file));
   };
 
   const copyUrl = (url: string) => {
@@ -275,12 +271,8 @@ function App() {
     console.log("DELETING", fileId);
 
     Axios.delete(`/api/file/${fileId}`, axiosConfig)
-      .then(() => {
-        getFileList();
-      })
-      .catch((err: any) => {
-        console.log("ERROR:", err.response.data.message);
-      });
+      .then(() => getFileList())
+      .catch((err: any) => console.log("ERROR:", err.response.data.message));
   };
 
   return (
@@ -289,14 +281,7 @@ function App() {
         <div className="grid-holder">
           <div className="upload-btn-section">
             <h1>File Uploader</h1>
-            <div
-              className={dragState === null ? "upload-button" : dragState === 1 ? "upload-button--hint-land" : "upload-button--ready-release"}
-              onDrop={handleFileDrop}
-              onDragOver={(event) => {
-                event.preventDefault();
-              }}
-              onClick={handlePickFile}
-            >
+            <div className={dragState === null ? "upload-button" : dragState === 1 ? "upload-button--hint-land" : "upload-button--ready-release"} onDrop={handleFileDrop} onDragOver={(event) => event.preventDefault()} onClick={handlePickFile}>
               {dragState === null && <span className="btn-title">Drag a file here</span>}
               {dragState === 1 && <span className="btn-title--dragged">Drop file here</span>}
               {dragState === 2 && <span className="btn-title--dragged">Release to upload</span>}
@@ -308,7 +293,7 @@ function App() {
                 </>
               )}
             </div>
-            <p>Maximum 10MB allowed</p>
+            <p>Maximum 20MB allowed</p>
             <div className="text-logo-section">
               by
               <img className="logo-text-svg" src="./images/tysnxu_text.svg" alt="" />
@@ -348,12 +333,7 @@ function App() {
                     <Link href={`${FILE_STORE_URL}//${file.url}`} target="_blank" color="inherit">
                       {file.fileName}
                     </Link>
-                    <IconButton
-                      style={{ color: "white" }}
-                      onClick={() => {
-                        copyUrl(file.url);
-                      }}
-                    >
+                    <IconButton style={{ color: "white" }} onClick={() => copyUrl(file.url)}>
                       <ContentCopyIcon />
                     </IconButton>
                     <IconButton
@@ -390,47 +370,18 @@ function App() {
                   </Box>
                 ))}
               </div>
-              <Box
-                className="uploads-table--btn-mobile"
-                onClick={() => {
-                  setFileDrawerOpen(true);
-                }}
-              >
+              <Box className="uploads-table--btn-mobile" onClick={() => setFileDrawerOpen(true)}>
                 Past Uploads ({previousUploads.length})
               </Box>
             </>
           )}
         </div>
-        <Dialog
-          open={dialogOpen}
-          onClose={() => {
-            setDialogOpen(false);
-          }}
-        >
+        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
           <DialogTitle sx={{ fontWeight: 700 }}>{dialogTitle}</DialogTitle>
           <DialogContent sx={{ lineHeight: "2rem" }}>{dialogMessage}</DialogContent>
-          <DialogActions>
-            {dialogButtons === null ? (
-              <Button
-                onClick={() => {
-                  setDialogOpen(false);
-                }}
-              >
-                OK
-              </Button>
-            ) : (
-              dialogButtons
-            )}
-          </DialogActions>
+          <DialogActions>{dialogButtons === null ? <Button onClick={() => setDialogOpen(false)}>OK</Button> : dialogButtons}</DialogActions>
         </Dialog>
-        <Snackbar
-          open={snackBarOpen}
-          autoHideDuration={2000}
-          onClose={() => {
-            setSnackBarOpen(false);
-          }}
-          message="Link copied to clipboard"
-        />
+        <Snackbar open={snackBarOpen} autoHideDuration={2000} onClose={() => setSnackBarOpen(false)} message="Link copied to clipboard" />
         <input
           type="file"
           id="file"
@@ -444,24 +395,10 @@ function App() {
           ref={inputFile}
           style={{ display: "none" }}
         />
-        <Dialog
-          fullScreen
-          open={fileDrawerOpen}
-          onClose={() => {
-            setFileDrawerOpen(false);
-          }}
-          TransitionComponent={Transition}
-        >
+        <Dialog fullScreen open={fileDrawerOpen} onClose={() => setFileDrawerOpen(false)} TransitionComponent={Transition}>
           <AppBar sx={{ position: "relative" }}>
             <Toolbar>
-              <IconButton
-                edge="start"
-                color="inherit"
-                onClick={() => {
-                  setFileDrawerOpen(false);
-                }}
-                aria-label="close"
-              >
+              <IconButton edge="start" color="inherit" onClick={() => setFileDrawerOpen(false)} aria-label="close">
                 <CloseIcon />
               </IconButton>
               <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
